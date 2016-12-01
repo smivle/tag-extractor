@@ -1,1 +1,5 @@
 /target/
+docs
+tagsWithoutSemantic
+tagsWithSemantic
+TODO.txt
