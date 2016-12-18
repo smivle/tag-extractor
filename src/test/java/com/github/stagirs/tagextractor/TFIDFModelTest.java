@@ -13,22 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.stagirs.tagextractor.cluster.impl;
+package com.github.stagirs.tagextractor;
 
-import com.github.stagirs.common.Store;
-import com.github.stagirs.common.StoreIterator;
-import com.github.stagirs.common.model.Tag;
+import com.github.stagirs.common.model.Document;
+import com.github.stagirs.common.model.DocumentParser;
+import com.github.stagirs.common.model.DocumentSerializer;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Test;
 
 /**
  *
  * @author Dmitriy Malakhov
  */
-public class KMeansPlusPlusClusterProcessorTest {
+public class TFIDFModelTest {
     @Test
     public void test() throws IOException{
-        new KMeansPlusPlusClusterProcessor().setClusters(new StoreIterator<>(new File("tagsWithoutSemantic"), Tag.class), new Store<>(new File("tagsWithCluster")));
+        List<Document> documents = new ArrayList<>();
+        for(File file : new File("../doc-extractor/docs/processed").listFiles()){
+            documents.add(DocumentParser.parse(file));
+        }
+        TFIDFModel.fillSementic(documents);
+        for (Document document : documents) {
+            DocumentSerializer.serialize(new File("../doc-extractor/docs/processed"), document);
+        }
     }
 }
