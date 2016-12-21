@@ -22,11 +22,15 @@ import com.github.stagirs.common.model.Section;
 import com.github.stagirs.common.model.Sentence;
 import com.github.stagirs.common.model.Text;
 import com.github.stagirs.common.text.TextUtils;
+import com.github.stagirs.lingvo.morpho.MorphoDictionary;
+import com.github.stagirs.lingvo.morpho.model.Attr;
+import com.github.stagirs.lingvo.morpho.model.NormMorpho;
 import gnu.trove.map.hash.TObjectIntHashMap;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -36,8 +40,10 @@ public class TFIDFModel {
     private Map<String, TObjectIntHashMap<String>> term2doc2count = new HashMap<>();
     private TObjectIntHashMap<String> doc2termcount = new TObjectIntHashMap<>();
     private List<Document> docs;
+    private MorphoDictionary md;
 
-    private TFIDFModel(List<Document> docs) {
+    private TFIDFModel(List<Document> docs, MorphoDictionary md) {
+        this.md = md;
         this.docs = docs;
         for (Document doc : docs) {
             process(doc);
@@ -48,12 +54,28 @@ public class TFIDFModel {
         if(text == null){
             return;
         }
-        for(String word : TextUtils.splitWords(text, true)){
-            if(!term2doc2count.containsKey(word)){
-                term2doc2count.put(word,  new TObjectIntHashMap<>());
+        for(String term : TextUtils.splitWords(text, true)){
+            Set<String> words = new HashSet<>();
+            for(NormMorpho nm : md.getNormForm(term)){
+                if(!nm.isService()){
+                    words.add(nm.getWord());
+                }
             }
-            term2doc2count.get(word).adjustOrPutValue(docId, k, k);
-            doc2termcount.adjustOrPutValue(docId, k, k);
+            if(words.isEmpty()){
+                if(!term2doc2count.containsKey(term)){
+                    term2doc2count.put(term,  new TObjectIntHashMap<>());
+                }
+                term2doc2count.get(term).adjustOrPutValue(docId, k, k);
+                doc2termcount.adjustOrPutValue(docId, k, k);
+            }else{
+                for(String word : words){
+                    if(!term2doc2count.containsKey(word)){
+                        term2doc2count.put(word,  new TObjectIntHashMap<>());
+                    }
+                    term2doc2count.get(word).adjustOrPutValue(docId, k, k);
+                    doc2termcount.adjustOrPutValue(docId, k, k);
+                }
+            }
         }
     }
     
@@ -93,8 +115,8 @@ public class TFIDFModel {
     }
     
     
-    public static void fillSementic(List<Document> docs) {
-        TFIDFModel model = new TFIDFModel(docs);
+    public static void fillSementic(List<Document> docs, MorphoDictionary md) {
+        TFIDFModel model = new TFIDFModel(docs, md);
         for (Document doc : docs) {
             model.fillSementic(doc);
         }
@@ -105,8 +127,22 @@ public class TFIDFModel {
         if(text == null){
             return semantic;
         }
-        for(String word : TextUtils.splitWords(text, true)){
-            semantic += tf(docId, word) * idf(word);
+        for(String term : TextUtils.splitWords(text, true)){
+            double localSemantic = 0;
+            Set<String> words = new HashSet<>();
+            for(NormMorpho nm : md.getNormForm(term)){
+                if(!nm.isService()){
+                    words.add(nm.getWord());
+                }
+            }
+            if(words.isEmpty()){
+                semantic += tf(docId, term) * idf(term);
+            }else{
+                for(String word : words){
+                    localSemantic = Math.max(localSemantic, tf(docId, word) * idf(word));
+                }
+                semantic += localSemantic;
+            }
         }
         return semantic;
     }

@@ -18,6 +18,8 @@ package com.github.stagirs.tagextractor;
 import com.github.stagirs.common.model.Document;
 import com.github.stagirs.common.model.DocumentParser;
 import com.github.stagirs.common.model.DocumentSerializer;
+import com.github.stagirs.lingvo.morpho.MorphoDictionary;
+import com.github.stagirs.lingvo.morpho.MorphoDictionaryFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,13 +33,15 @@ import org.junit.Test;
 public class TFIDFModelTest {
     @Test
     public void test() throws IOException{
+        MorphoDictionary md = MorphoDictionaryFactory.get(new File("C:\\Program Files\\Apache Software Foundation\\Tomcat 8.0\\work\\stagirs\\dict.opcorpora.xml"));
+        
         List<Document> documents = new ArrayList<>();
-        for(File file : new File("../doc-extractor/docs/processed").listFiles()){
+        for(File file : new File("C:\\Program Files\\Apache Software Foundation\\Tomcat 8.0\\work\\stagirs\\docs\\processed").listFiles()){
             documents.add(DocumentParser.parse(file));
         }
-        TFIDFModel.fillSementic(documents);
+        TFIDFModel.fillSementic(documents, md);
         for (Document document : documents) {
-            DocumentSerializer.serialize(new File("../doc-extractor/docs/processed"), document);
+            DocumentSerializer.serialize(new File("C:\\Program Files\\Apache Software Foundation\\Tomcat 8.0\\work\\stagirs\\docs\\processed"), document);
         }
     }
 }
