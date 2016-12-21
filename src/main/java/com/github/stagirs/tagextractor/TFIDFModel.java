@@ -15,8 +15,10 @@
  */
 package com.github.stagirs.tagextractor;
 
+import com.github.stagirs.common.model.Block;
 import com.github.stagirs.common.model.Document;
-import com.github.stagirs.common.model.DocumentUtils;
+import com.github.stagirs.common.model.Point;
+import com.github.stagirs.common.model.Section;
 import com.github.stagirs.common.model.Sentence;
 import com.github.stagirs.common.model.Text;
 import com.github.stagirs.common.text.TextUtils;
@@ -33,44 +35,116 @@ import java.util.Map;
 public class TFIDFModel {
     private Map<String, TObjectIntHashMap<String>> term2doc2count = new HashMap<>();
     private TObjectIntHashMap<String> doc2termcount = new TObjectIntHashMap<>();
-    private Map<String, List<Sentence>> doc2list = new HashMap<>();
+    private List<Document> docs;
 
     private TFIDFModel(List<Document> docs) {
+        this.docs = docs;
         for (Document doc : docs) {
-            doc2list.put(doc.getId(), new ArrayList<>());
-            DocumentUtils.fillSentences(doc, doc2list.get(doc.getId()));
-            for(Sentence sentence : doc2list.get(doc.getId())){
-                for (Text text : sentence.getParts()) {
-                    if(text.getClassName() != null){
-                        continue;
-                    }
-                    for(String word : TextUtils.splitWords(text.getText(), true)){
-                        if(!term2doc2count.containsKey(word)){
-                            term2doc2count.put(word,  new TObjectIntHashMap<>());
-                        }
-                        term2doc2count.get(word).adjustOrPutValue(doc.getId(), 1, 1);
-                        doc2termcount.adjustOrPutValue(doc.getId(), 1, 1);
-                    }
-                }
+            process(doc);
+        }
+    }
+    
+    private void process(String docId, String text, int k){
+        if(text == null){
+            return;
+        }
+        for(String word : TextUtils.splitWords(text, true)){
+            if(!term2doc2count.containsKey(word)){
+                term2doc2count.put(word,  new TObjectIntHashMap<>());
+            }
+            term2doc2count.get(word).adjustOrPutValue(docId, k, k);
+            doc2termcount.adjustOrPutValue(docId, k, k);
+        }
+    }
+    
+    private void process(Document document){
+        process(document.getId(), document.getTitle(), 100);
+        for (Block block : document.getBlocks()) {
+            if(block instanceof Section){
+                process(document.getId(), (Section) block);
+            }
+            if(block instanceof Point){
+                process(document.getId(), (Point) block);
             }
         }
     }
-
+    
+    private void process(String docId, Section section){
+        process(docId, section.getTitle(), 10);
+        for (Block block : section.getBlocks()) {
+            if(block instanceof Section){
+                process(docId, (Section) block);
+            }
+            if(block instanceof Point){
+                process(docId, (Point) block);
+            }
+        }
+    }
+    
+    private void process(String docId, Point point){
+        for (Sentence sentence : point.getSentences()) {
+            for (Text text : sentence.getParts()) {
+                if(text.getClassName() != null){
+                    continue;
+                }
+                process(docId, text.getText(), 1);
+            }
+        }
+    }
+    
+    
     public static void fillSementic(List<Document> docs) {
         TFIDFModel model = new TFIDFModel(docs);
-        for (Map.Entry<String, List<Sentence>> entry : model.doc2list.entrySet()) {
-            for(Sentence sentence : entry.getValue()){
-                double semantic = 0;
-                for (Text text : sentence.getParts()) {
-                    if(text.getClassName() != null){
-                        continue;
-                    }
-                    for(String word : TextUtils.splitWords(text.getText(), true)){
-                        semantic += model.tf(entry.getKey(), word) * model.idf(word);
-                    }
-                }
-                sentence.setSemantic(semantic);
+        for (Document doc : docs) {
+            model.fillSementic(doc);
+        }
+    }
+    
+    private double getSementic(String docId, String text){
+        double semantic = 0;
+        if(text == null){
+            return semantic;
+        }
+        for(String word : TextUtils.splitWords(text, true)){
+            semantic += tf(docId, word) * idf(word);
+        }
+        return semantic;
+    }
+    
+    private void fillSementic(Document document){
+        document.setTitleSemantic(100 * getSementic(document.getId(), document.getTitle()));
+        for (Block block : document.getBlocks()) {
+            if(block instanceof Section){
+                fillSementic(document.getId(), (Section) block);
             }
+            if(block instanceof Point){
+                fillSementic(document.getId(), (Point) block);
+            }
+        }
+    }
+    
+    private void fillSementic(String docId, Section section){
+        section.setTitleSemantic(10 * getSementic(docId, section.getTitle()));
+        for (Block block : section.getBlocks()) {
+            if(block instanceof Section){
+                fillSementic(docId, (Section) block);
+            }
+            if(block instanceof Point){
+                fillSementic(docId, (Point) block);
+            }
+        }
+    }
+    
+    private void fillSementic(String docId, Point point){
+        for (Sentence sentence : point.getSentences()) {
+            double semantic = 0;
+            for (Text text : sentence.getParts()) {
+                if(text.getClassName() != null){
+                    continue;
+                }
+                semantic += getSementic(docId, text.getText());
+            }
+            sentence.setSemantic(semantic);
         }
     }
     
