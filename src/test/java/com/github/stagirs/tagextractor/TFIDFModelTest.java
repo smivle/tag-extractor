@@ -33,15 +33,15 @@ import org.junit.Test;
 public class TFIDFModelTest {
     @Test
     public void test() throws IOException{
-        MorphoDictionary md = MorphoDictionaryFactory.get(new File("C:\\Program Files\\Apache Software Foundation\\Tomcat 8.0\\work\\stagirs\\dict.opcorpora.xml"));
+        MorphoDictionary md = MorphoDictionaryFactory.get(new File("W:\\apache-tomcat-8.0.37\\work\\stagirs\\dict.opcorpora.xml"));
         
         List<Document> documents = new ArrayList<>();
-        for(File file : new File("C:\\Program Files\\Apache Software Foundation\\Tomcat 8.0\\work\\stagirs\\docs\\processed").listFiles()){
+        for(File file : new File("W:\\apache-tomcat-8.0.37\\work\\stagirs\\docs\\processed").listFiles()){
             documents.add(DocumentParser.parse(file));
         }
         TFIDFModel.fillSementic(documents, md);
         for (Document document : documents) {
-            DocumentSerializer.serialize(new File("C:\\Program Files\\Apache Software Foundation\\Tomcat 8.0\\work\\stagirs\\docs\\processed"), document);
+            DocumentSerializer.serialize(new File("W:\\apache-tomcat-8.0.37\\work\\stagirs\\docs\\processed"), document);
         }
     }
 }
